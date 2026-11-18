@@ -177,8 +177,11 @@ def main() -> None:
         graph.write_formula(row, 1, f"=IF($A{excel_row}=\"\",\"\",'01_КП'!$D{excel_row})", text)
         graph.write_formula(row, 2, f"=IF($A{excel_row}=\"\",\"\",'01_КП'!$E{excel_row})", date_cell)
         graph.write_formula(row, 3, f"=IF($A{excel_row}=\"\",\"\",'01_КП'!$F{excel_row}-'01_КП'!$E{excel_row}+1)", text)
-        graph.write_formula(row, 4, f"=IF($A{excel_row}=\"\",NA(),$D{excel_row})", text)
-        graph.write_formula(row, 5, "=NA()", text)
+        # Empty reserved rows must stay empty in the visible source table.  The
+        # chart ignores blank values, whereas NA() leaves distracting #N/A cells
+        # for work that has not yet been selected.
+        graph.write_formula(row, 4, f"=IF($A{excel_row}=\"\",\"\",$D{excel_row})", text)
+        graph.write_formula(row, 5, "=\"\"", text)
     workbook.define_name("GIP_Gantt_Task_Names", "=OFFSET('05_График'!$B$5,0,0,COUNTA('01_КП'!$C$5:$C$79),1)")
     workbook.define_name("GIP_Gantt_Starts", "=OFFSET('05_График'!$C$5,0,0,COUNTA('01_КП'!$C$5:$C$79),1)")
     workbook.define_name("GIP_Gantt_Durations", "=OFFSET('05_График'!$E$5,0,0,COUNTA('01_КП'!$C$5:$C$79),1)")
