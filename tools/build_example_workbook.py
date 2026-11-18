@@ -1,4 +1,8 @@
-"""Build the single GIP Navigator workbook from a validated КП source."""
+"""Build a concrete example workbook from a validated КП source.
+
+This helper is deliberately kept out of the production import workflow.  It
+generates examples only and must not be used to update a GIP's working book.
+"""
 from __future__ import annotations
 import argparse, sys
 from datetime import date
@@ -9,7 +13,7 @@ from gipnav_import import preview
 
 ROOT=Path(__file__).parents[1]
 def main():
- p=argparse.ArgumentParser(); p.add_argument('source',type=Path); p.add_argument('--output',type=Path,default=ROOT/'templates'/'GIP_Navigator_STAGE0_PROTOTYPE.xlsx'); a=p.parse_args()
+ p=argparse.ArgumentParser(); p.add_argument('source',type=Path); p.add_argument('--output',type=Path,default=ROOT/'examples'/'GIP_Navigator_EXAMPLE.xlsx'); a=p.parse_args()
  d=preview(a.source.resolve()); a.output.parent.mkdir(parents=True,exist_ok=True)
  w=xlsxwriter.Workbook(a.output); w.set_calc_mode('auto')
  blue='#125AB6'; purple='#7B3F98'; orange='#F5A623'; cyan='#0C9BD6'; green='#00B050'; pale='#F4F7FB'; yellow='#FFF2CC'

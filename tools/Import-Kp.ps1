@@ -13,7 +13,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 if ([string]::IsNullOrWhiteSpace($MasterPath)) {
-    $MasterPath = Join-Path $PSScriptRoot '..\templates\GIP_Navigator_STAGE0_PROTOTYPE.xlsx'
+    $MasterPath = Join-Path $PSScriptRoot '..\templates\GIP_Navigator_TEMPLATE.xlsx'
 }
 
 function Get-FullPath([string]$Path, [string]$Label) {
@@ -60,13 +60,10 @@ if ($PreviewOnly -or -not $Apply) {
     return
 }
 
-# Rebuild the single workbook from the validated source. This avoids Excel COM
-# character-set conversion and keeps every dependent sheet in sync.
-$builder = Join-Path $PSScriptRoot 'build_gip_navigator.py'
-& $python $builder $source '--output' $master
-if ($LASTEXITCODE -ne 0) { throw 'Сборка GIP Navigator после импорта завершилась с ошибкой.' }
-Write-Output "Импорт выполнен: $(@($preview.stages).Count) этапов КП внесены в $master"
-return
+# A full rebuild would erase the GIP's selected SR, facts, acts and agreed
+# baseline. It is intentionally disabled until the safe in-place updater is
+# introduced in Step 5. Preview remains available and never changes a file.
+throw 'Безопасное обновление КП в существующей книге пока не включено. Изменения не внесены: используйте -PreviewOnly. Полная пересборка книги намеренно запрещена, чтобы не потерять данные ГИПа.'
 
 $excel = $null
 $workbook = $null

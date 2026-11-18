@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).with_name('vendor')))
 import xlsxwriter
-out=Path(__file__).parents[1]/'templates'/'GIP_Navigator_STAGE0_PROTOTYPE.xlsx'
+out=Path(__file__).parents[1]/'examples'/'GIP_Navigator_STAGE0_DEMO.xlsx'
 if len(sys.argv)==3: out=Path(sys.argv[2])
 out.parent.mkdir(parents=True,exist_ok=True); w=xlsxwriter.Workbook(out); w.set_calc_mode('auto')
 h=w.add_format({'bold':True,'font_color':'white','bg_color':'#C0504D'}); d=w.add_format({'num_format':'dd.mm.yyyy'}); y=w.add_format({'num_format':'dd.mm.yyyy','bg_color':'#FFF2CC'}); yi=w.add_format({'bg_color':'#FFF2CC'})
