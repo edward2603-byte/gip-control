@@ -1,0 +1,60 @@
+﻿param(
+    [string]$OutputPath
+)
+
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Off
+$repoRoot = Split-Path -Parent $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($OutputPath)) { $OutputPath = Join-Path $repoRoot 'templates\GIP_Navigator_TEMPLATE.xlsm' }
+$OutputPath = [IO.Path]::GetFullPath($OutputPath)
+$basePath = Join-Path $repoRoot 'templates\GIP_Navigator_TEMPLATE.xlsx'
+$modulePath = Join-Path $repoRoot 'vba\GIPNavigator.bas'
+
+& py (Join-Path $repoRoot 'tools\build_template.py') --output $basePath
+if ($LASTEXITCODE -ne 0) { throw 'Не удалось собрать базовую книгу XLSX.' }
+
+$excel = $null
+$book = $null
+try {
+    $excel = New-Object -ComObject Excel.Application
+    $excel.Visible = $false
+    $excel.DisplayAlerts = $false
+    $book = $excel.Workbooks.Open($basePath)
+    $component = $book.VBProject.VBComponents.Add(1)
+    $component.Name = 'GIPNavigator'
+    $moduleText = [IO.File]::ReadAllText($modulePath, [Text.UTF8Encoding]::new($false))
+    $component.CodeModule.AddFromString($moduleText)
+
+    $homeSheet = $book.Worksheets.Item('00_Главная')
+    $homeSheet.Range('A8:P10').Value2 = '1. Скопируйте этот файл в папку проекта и переименуйте его.' + [Environment]::NewLine + '2. Откройте книгу в Microsoft Excel и нажмите «Импортировать КП».' + [Environment]::NewLine + '3. Выберите исходный КП (.xlsx или .xls), проверьте предпросмотр и подтвердите импорт.'
+    $book.SaveAs($OutputPath, 52)
+
+    $actions = @(
+        @('GIP_Action_Import', 'Импортировать КП', 'ImportKp', 24, 186, 170, 34, 15111910),
+        @('GIP_Action_SR', 'Перейти к СР', 'GoToSR', 208, 186, 150, 34, 14087411),
+        @('GIP_Action_Graph', 'Открыть график', 'GoToGraph', 372, 186, 150, 34, 10125999),
+        @('GIP_Action_Control', 'Открыть контроль', 'GoToControl', 536, 186, 160, 34, 5304534),
+        @('GIP_Action_Acts', 'Открыть акты', 'GoToActs', 710, 186, 140, 34, 5287936)
+    )
+    foreach ($a in $actions) {
+        $shape = $homeSheet.Shapes.AddShape(5, $a[3], $a[4], $a[5], $a[6])
+        $shape.Name = $a[0]
+        $shape.TextFrame2.TextRange.Text = $a[1]
+        $shape.TextFrame2.TextRange.Font.Size = 11
+        $shape.TextFrame2.TextRange.Font.Bold = $true
+        $shape.TextFrame2.TextRange.Font.Fill.ForeColor.RGB = 16777215
+        $shape.Fill.ForeColor.RGB = $a[7]
+        $shape.Line.Visible = $false
+        # Do not qualify the macro with the template filename: the user renames
+        # the copied workbook before opening it.
+        $shape.OnAction = $a[2]
+    }
+    $book.Save()
+    Write-Output $OutputPath
+}
+finally {
+    if ($book) { $book.Close($false) }
+    if ($excel) { $excel.Quit() }
+    foreach ($item in @($component, $book, $excel)) { if ($null -ne $item -and [Runtime.InteropServices.Marshal]::IsComObject($item)) { [void][Runtime.InteropServices.Marshal]::ReleaseComObject($item) } }
+    [GC]::Collect(); [GC]::WaitForPendingFinalizers()
+}
