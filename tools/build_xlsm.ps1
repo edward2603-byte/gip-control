@@ -33,7 +33,7 @@ try {
     $book.VBProject.VBComponents.Item($book.CodeName).CodeModule.AddFromString($workbookClassText)
 
     $homeSheet = $book.Worksheets.Item('00_Главная')
-    $homeSheet.Range('A15:P17').Value2 = '1. Скопируйте этот файл в папку проекта и переименуйте его.' + [Environment]::NewLine + '2. Откройте книгу в Microsoft Excel и нажмите «Импортировать КП».' + [Environment]::NewLine + '3. После импорта выберите СР, задайте связи FS/SS на листе 04 и при необходимости нажмите «Пересчитать СР».'
+    $homeSheet.Range('A15:P17').Value2 = '1. Скопируйте этот файл в папку проекта и переименуйте его.' + [Environment]::NewLine + '2. Откройте книгу в Microsoft Excel, нажмите «Импортировать КП» и укажите дату подписания наряд-заказа на листе 01.' + [Environment]::NewLine + '3. После импорта выберите СР, задайте связи FS/SS на листе 04 и при необходимости нажмите «Пересчитать СР».'
     $book.SaveAs($OutputPath, 52)
 
     $actions = @(
@@ -42,7 +42,8 @@ try {
         @('GIP_Action_AddSR', 'Добавить экземпляр СР', 'AddSRInstance', 372, 190, 185, 34, 10125999),
         @('GIP_Action_Recalc', 'Пересчитать СР', 'RecalculateSRNetwork', 571, 190, 165, 34, 5304534),
         @('GIP_Action_Graph', 'Открыть график', 'GoToGraph', 750, 190, 150, 34, 10125999),
-        @('GIP_Action_Control', 'Открыть контроль', 'GoToControl', 914, 190, 160, 34, 5304534)
+        @('GIP_Action_Control', 'Открыть контроль', 'GoToControl', 914, 190, 160, 34, 5304534),
+        @('GIP_Action_Approve', 'Зафиксировать согласование', 'ApproveBaseline', 1088, 190, 220, 34, 10125999)
     )
     foreach ($a in $actions) {
         $shape = $homeSheet.Shapes.AddShape(5, $a[3], $a[4], $a[5], $a[6])
@@ -62,10 +63,12 @@ try {
     $librarySheet.Range('A5:A85').NumberFormat = ';;;'
     for ($row = 5; $row -le 85; $row++) {
         $cell = $librarySheet.Cells.Item($row, 1)
+        $cell.Value2 = $true
         $checkBox = $librarySheet.CheckBoxes().Add($cell.Left + 22, $cell.Top + 5, 16, 16)
         $checkBox.Name = "GIP_SR_Select_$row"
         $checkBox.Caption = ''
         $checkBox.LinkedCell = "'02_Библиотека_СР'!`$A`$$row"
+        $checkBox.Value = 1
         $checkBox.OnAction = 'SyncSelectedSR'
         $checkBox.Placement = 1
     }
