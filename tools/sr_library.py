@@ -84,27 +84,27 @@ SR-080|РД|Подготовка и выпуск рабочей документ
 SR-081|РД|Передача РД заказчику|2 дн.|По PDF"""
 
 
-def duration_fields(raw: str) -> tuple[int | None, str, str]:
-    """Return editable duration, day type and provenance without inventing a norm."""
+def duration_fields(raw: str) -> tuple[int | None, str]:
+    """Return editable duration and provenance; all durations are calendar days."""
     if raw.startswith("0"):
-        return 0, "календарные", "требует уточнения" if "уточн" in raw else "диктовка"
+        return 0, "требует уточнения" if "уточн" in raw else "диктовка"
     if "уточн" in raw:
         digits = "".join(character for character in raw if character.isdigit())
-        return (int(digits) if digits else None), "календарные" if "к.д." in raw else "уточнить", "требует уточнения"
+        return (int(digits) if digits else None), "требует уточнения"
     digits = "".join(character for character in raw if character.isdigit())
-    return int(digits), "календарные" if "к.д." in raw else "рабочие", "диктовка"
+    return int(digits), "диктовка"
 
 
 def library_rows() -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for raw in RAW_LIBRARY.splitlines():
         code, group, name, duration, condition = raw.split("|", 4)
-        duration_value, day_type, source = duration_fields(duration)
+        duration_value, source = duration_fields(duration)
         if "PDF" in condition or "PDF" in duration:
             source = "PDF" if source != "требует уточнения" else "PDF, требует уточнения"
         rows.append({
             "code": code, "group": group, "name": name, "result": name,
-            "duration": duration_value, "day_type": day_type, "applicability": condition,
+            "duration": duration_value, "applicability": condition,
             "needs_id": "Да" if group.startswith("ИД") or "ИД " in name or " ИД" in name else "Нет",
             "source": source, "dependency": "Назначается ГИПом", "note": f"Исходная запись: {duration}. {condition}",
         })

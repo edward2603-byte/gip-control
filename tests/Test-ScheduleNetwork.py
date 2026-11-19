@@ -9,28 +9,28 @@ from schedule_network import calculate
 
 
 def main() -> None:
-    chain = [
-        {"id": "ID-GR", "planned_start": date(2026, 1, 1), "duration": 1, "day_type": "календарные", "expected_end": date(2026, 1, 10)},
-        {"id": "GR", "planned_start": date(2026, 1, 1), "duration": 3, "day_type": "календарные", "stage": "A", "predecessors": [{"id": "ID-GR", "relation": "FS", "lag": 0}]},
+    project_start = min(date(2027, 3, 10), date(2027, 3, 1), date(2027, 4, 1))
+    network = [
+        {"id": "ROOT", "duration": 1},
+        {"id": "FS", "duration": 3, "predecessors": [{"id": "ROOT", "relation": "FS", "lag": 0}]},
+        {"id": "SS", "duration": 1, "predecessors": [{"id": "ROOT", "relation": "SS", "lag": 2}]},
     ]
-    delayed = calculate(chain, {"A": date(2026, 1, 11)})
-    assert delayed["items"]["GR"]["forecast_start"] == date(2026, 1, 11)
-    assert any(issue["kind"] == "cp_breach" for issue in delayed["issues"])
+    planned = calculate(network, project_start)
+    assert planned["items"]["ROOT"]["forecast_start"] == date(2027, 3, 1)
+    assert planned["items"]["FS"]["forecast_start"] == date(2027, 3, 2)
+    assert planned["items"]["FS"]["forecast_end"] == date(2027, 3, 4)
+    assert planned["items"]["SS"]["forecast_start"] == date(2027, 3, 3)
 
-    parallel = [
-        {"id": "FIELD", "planned_start": date(2026, 2, 1), "duration": 30, "day_type": "календарные"},
-        {"id": "M20", "duration": 0, "day_type": "календарные", "predecessors": [{"id": "FIELD", "relation": "SS", "lag": 19}]},
-        {"id": "PLACE", "duration": 20, "day_type": "календарные", "predecessors": [{"id": "M20", "relation": "FS", "lag": 0}]},
-    ]
-    planned = calculate(parallel)
-    assert planned["items"]["M20"]["forecast_start"] == date(2026, 2, 20)
-    assert planned["items"]["PLACE"]["forecast_start"] == date(2026, 2, 21)
-    assert planned["items"]["PLACE"]["forecast_start"] < planned["items"]["FIELD"]["forecast_end"]
+    weekend = calculate([{"id": "W", "duration": 2}], date(2027, 5, 1))
+    assert weekend["items"]["W"]["forecast_start"] == date(2027, 5, 1)
+    assert weekend["items"]["W"]["forecast_end"] == date(2027, 5, 2)
 
-    broken = calculate([{"id": "A", "duration": 1, "day_type": "календарные", "predecessors": [{"id": "B", "relation": "FS"}]},
-                        {"id": "B", "duration": 1, "day_type": "календарные", "predecessors": [{"id": "A", "relation": "FS"}]}])
+    broken = calculate([{"id": "A", "duration": 1, "predecessors": [{"id": "B", "relation": "FS"}]},
+                        {"id": "B", "duration": 1, "predecessors": [{"id": "A", "relation": "FS"}]}], project_start)
     assert {issue["kind"] for issue in broken["issues"]} == {"cycle"}
-    print("PASS: сеть СР рассчитала задержку ИД, параллельную веху 20-го дня и цикл.")
+    missing = calculate([{"id": "A", "duration": 1, "predecessors": [{"id": "MISSING", "relation": "FS"}]}], project_start)
+    assert any(issue["kind"] == "unknown_predecessor" for issue in missing["issues"])
+    print("PASS: независимая сеть СР рассчитала project_start, FS/SS, календарные дни, цикл и отсутствующую СР.")
 
 
 if __name__ == "__main__":

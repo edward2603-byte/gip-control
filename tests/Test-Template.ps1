@@ -13,7 +13,7 @@ $creator = Join-Path $repo 'tools\New-ProjectFromTemplate.ps1'
 if ($LASTEXITCODE -ne 0) { throw 'Не удалось собрать мастер-шаблон.' }
 if (-not (Test-Path -LiteralPath $template -PathType Leaf)) { throw 'Мастер-шаблон не создан.' }
 
-$requiredSheets = @('00_Главная','01_КП','02_Библиотека_СР','03_СР_проекта','04_Согласование_плана','05_График','06_Контроль','07_Акты','08_Внешние_согласования','99_Служебный')
+$requiredSheets = @('00_Главная','01_КП','02_Библиотека_СР','03_СР_проекта','04_Согласование_плана','05_График','06_Контроль','99_Служебный')
 $testDir = Join-Path ([IO.Path]::GetTempPath()) ("gip-navigator-template-" + [guid]::NewGuid())
 New-Item -ItemType Directory -Path $testDir | Out-Null
 try {
@@ -32,7 +32,8 @@ try {
         foreach ($sheet in $requiredSheets) { if ($sheetNames -notcontains $sheet) { throw "Отсутствует лист: $sheet" } }
         if ($templateBook.Worksheets.Item('01_КП').Cells.Item(5,3).Value2) { throw 'В мастер-шаблоне есть этап КП.' }
         if ($templateBook.Worksheets.Item('03_СР_проекта').Cells.Item(5,2).Value2) { throw 'В мастер-шаблоне есть демонстрационная СР.' }
-        if ($templateBook.Worksheets.Item('02_Библиотека_СР').Range('A5').Text -ne 'SR-001' -or $templateBook.Worksheets.Item('02_Библиотека_СР').Range('A85').Text -ne 'SR-081') { throw 'Библиотека СР не содержит 81 типовую работу.' }
+        if ($templateBook.Worksheets.Item('02_Библиотека_СР').Range('B5').Text -ne 'SR-001' -or $templateBook.Worksheets.Item('02_Библиотека_СР').Range('B85').Text -ne 'SR-081') { throw 'Библиотека СР не содержит 81 типовую работу.' }
+        if ($templateBook.Worksheets.Item('01_КП').Range('H4').Text -ne 'Дата фактического актирования' -or $templateBook.Worksheets.Item('01_КП').Range('J5').Formula -notmatch 'G5') { throw 'В 01_КП не подготовлены поля H:K для актирования.' }
         $templateBook.Close($false); [void][Runtime.InteropServices.Marshal]::ReleaseComObject($templateBook); $templateBook = $null
         $firstBook = $excel.Workbooks.Open((Resolve-Path -LiteralPath $first).Path)
         $firstId = [string]$firstBook.Worksheets.Item('99_Служебный').Range('B4').Value2
@@ -52,12 +53,12 @@ try {
         for ($index = 1; $index -le 50; $index++) { $sr75.Cells.Item($index + 4, 2).Value2 = ('SR-{0:D3}' -f $index) }
         $sr75.Cells.Item(55, 2).Value2 = 'CUSTOM-001'
         $sr75.Cells.Item(55, 3).Value2 = 'Собственная СР'
-        $sr75.Cells.Item(55, 6).Value2 = [double]5
+        $sr75.Cells.Item(55, 5).Value2 = [double]5
         $excel.CalculateFullRebuild()
         if ([int]$firstBook.Worksheets.Item('00_Главная').Range('E5').Value2 -ne 75) { throw 'Сводка не обработала 75 этапов КП.' }
         if ([decimal]$firstBook.Worksheets.Item('00_Главная').Range('I5').Value2 -ne 2850000) { throw 'Сумма 75 этапов рассчитана неверно.' }
-        if ($firstBook.Worksheets.Item('03_СР_проекта').Range('D5').Validation.Type -ne 3) { throw 'Нет списка выбора этапа КП для СР.' }
-        if ($firstBook.Worksheets.Item('07_Акты').Range('B5').Validation.Type -ne 3) { throw 'Нет списка выбора этапа КП для актов.' }
+        if ($firstBook.Worksheets.Item('03_СР_проекта').Columns('M').Hidden -ne $true) { throw 'Техническая проверка сети СР должна быть скрыта.' }
+        if ($firstBook.Worksheets.Item('04_Согласование_плана').Range('D5').Validation.Type -ne 3) { throw 'Нет списка FS/SS для связей СР.' }
         if ($firstBook.Worksheets.Item('05_График').ChartObjects().Count -ne 1) { throw 'Нет диаграммы Ганта КП.' }
         if ([string]::IsNullOrWhiteSpace($sr75.Range('C5').Text) -or $sr75.Range('C55').Text -ne 'Собственная СР') { throw 'Выбор библиотечной или собственной СР не работает.' }
         if ($sr75.Range('C304').Formula -notmatch 'VLOOKUP') { throw 'Формула выбора СР не распространена на 300-ю строку.' }
